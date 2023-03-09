@@ -16,29 +16,29 @@ from pybricks.ev3devices import Motor
 from pybricks.parameters import Port
 from pybricks.robotics import DriveBase
 
-naprej = -1
-nazaj = 1
+# naprej = -1
+# nazaj = 1
 
 # Initialize the EV3 Brick.
 ev3 = EV3Brick()
 
 # Initialize the motors.
-left_motor = Motor(Port.C)
-right_motor = Motor(Port.B)
+left_motor = Motor(Port.B, positive_direction = Direction.COUNTERCLOCKWISE, gears = [24,40])
+right_motor = Motor(Port.C, positive_direction = Direction.COUNTERCLOCKWISE, gears = [24,40])
 
 # Initialize the drive base.
-robot = DriveBase(left_motor, right_motor, wheel_diameter=55.5, axle_track=104)
+robot = DriveBase(left_motor, right_motor, wheel_diameter=56, axle_track=80)
 
 # Go forward and backwards for one meter.
-robot.straight(1000 * naprej)
-ev3.speaker.beep()
+# robot.straight(1000)
+# ev3.speaker.beep()
 
-robot.straight(1000 * nazaj)
-ev3.speaker.beep()
+# robot.straight(-1000)
+# ev3.speaker.beep()
 
 # Turn clockwise by 360 degrees and back again.
-robot.turn(360)
+robot.turn(90)
 ev3.speaker.beep()
 
-robot.turn(-360)
-ev3.speaker.beep()
+# robot.turn(-360)
+# ev3.speaker.beep()
