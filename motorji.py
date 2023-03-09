@@ -53,11 +53,3 @@ from ev3dev.ev3 import TouchSensor, Button, LargeMotor, Sound, ColorSensor
 # right_motor.stop()
 
 
-# Color
-color_sensor = ColorSensor("in1", name_exact=True)
-#print(color_sensor.color)
-
-spkr = Sound()
-
-spkr.speak('Hello, I am Robot')
-spkr.speak(color_sensor.color)
