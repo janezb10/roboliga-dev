@@ -15,10 +15,10 @@ __email__ = "nejc.ilc@fri.uni-lj.si"
 __status__ = "Active"
 
 
-# ce zelite na svojem racunalniku namestiti knjiznico python-ev3dev 
+# Če želite na svojem računalniku namestiti knjižnico python-ev3dev 
 # in uprorabljati "code auto-completition":
 # pip install python-ev3dev
-from ev3dev.ev3 import TouchSensor, Button, LargeMotor, Sound, ColorSensor
+from ev3dev.ev3 import TouchSensor, Button, LargeMotor, Sound
 # Na EV3 robotu je potrebno namestiti paketa ujson in pycurl:
 # sudo apt-get update
 # sudo apt-get install python3-pycurl
@@ -32,49 +32,49 @@ from time import time
 from enum import Enum
 from collections import deque
 
-# Nastavitev najpomembnjsih parametrov
-# ID robota. Spremenite, da ustreza stevilki oznacbe, ki je dolocena vasi ekipi.
-ROBOT_ID = "14"
-# URL igralnega streznika.
+# Nastavitev najpomembnjših parametrov
+# ID robota. Spremenite, da ustreza številki označbe, ki je določena vaši ekipi.
+ROBOT_ID = "22"
+# URL igralnega strežnika.
 SERVER_URL = "192.168.0.3:8088/game/"
-# stevilka ID igre, v kateri je robot.
-GAME_ID = "ea53"
+# Številka ID igre, v kateri je robot.
+GAME_ID = "793f"
 
 # Priklop motorjev na izhode.
 MOTOR_LEFT_PORT = 'outB'
 MOTOR_RIGHT_PORT = 'outC'
 
-# Najvisja dovoljena hitrost motorjev (teoreticno je to 1000).
-SPEED_MAX = 500
-# Najvisja dovoljena nazivna hitrost motorjev pri voznji naravnost.
-# Naj bo manjsa kot SPEED_MAX, da ima robot se moznost zavijati.
-SPEED_BASE_MAX = 300
+# Najvišja dovoljena hitrost motorjev (teoretično je to 1000).
+SPEED_MAX = 900
+# Najvišja dovoljena nazivna hitrost motorjev pri vožnji naravnost.
+# Naj bo manjša kot SPEED_MAX, da ima robot še možnost zavijati.
+SPEED_BASE_MAX = 800
 
 # Parametri za PID
-# Obracanje na mestu in zavijanje med voznjo naravnost
+# Obračanje na mestu in zavijanje med vožnjo naravnost
 PID_TURN_KP = 3.0
 PID_TURN_KI = 0.5
 PID_TURN_KD = 0.0
 PID_TURN_INT_MAX = 100
-# Nazivna hitrost pri voznji naravnost.
+# Nazivna hitrost pri vožnji naravnost.
 PID_STRAIGHT_KP = 2.0
 PID_STRAIGHT_KI = 0.5
 PID_STRAIGHT_KD = 0.01
 PID_STRAIGHT_INT_MAX = 100
 
-# Dolzina FIFO vrste za hranjenje meritev (oddaljenost in kot do cilja).
+# Dolžina FIFO vrste za hranjenje meritev (oddaljenost in kot do cilja).
 HIST_QUEUE_LENGTH = 3
 
 # Razdalje - tolerance
 # Dovoljena napaka v oddaljenosti do cilja [mm].
 DIST_EPS = 20
-# Dovoljena napaka pri obracanju [stopinje].
-DIR_EPS = 10
-# Blizina cilja [mm].
+# Dovoljena napaka pri obračanju [stopinje].
+DIR_EPS = 5
+# Bližina cilja [mm].
 DIST_NEAR = 100
-# Koliko sekund je robot lahko stanju voznje naravnost v blizini cilja
-# (oddaljen manj kot DIST_NEAR), preden sprozimo varnostni mehanizem
-# in ga damo v stanje obracanja na mestu.
+# Koliko sekund je robot lahko stanju vožnje naravnost v bližini cilja
+# (oddaljen manj kot DIST_NEAR), preden sprožimo varnostni mehanizem
+# in ga damo v stanje obračanja na mestu.
 TIMER_NEAR_TARGET = 3
 
 
@@ -93,7 +93,7 @@ class State(Enum):
 
 class Connection():
     """
-    Objekt za vzpostavljanje povezave s streznikom.
+    Objekt za vzpostavljanje povezave s strežnikom.
     """
 
     def __init__(self, url: str):
@@ -101,7 +101,7 @@ class Connection():
         Inicializacija nove povezave.
 
         Argumenti:
-        url: pot do datoteke na strezniku (URL)
+        url: pot do datoteke na strežniku (URL)
         """
         self._url = url
         self._buffer = BytesIO()
@@ -112,16 +112,16 @@ class Connection():
 
     def request(self, debug=False):
         """
-        Nalaganje podatkov s streznika.
+        Nalaganje podatkov s strežnika.
         """
-        # Pocistimo pomnilnik za shranjevanje sporocila
+        # Počistimo pomnilnik za shranjevanje sporočila
         self._buffer.seek(0, 0)
         self._buffer.truncate()
-        # Posljemo zahtevek na streznik
+        # Pošljemo zahtevek na strežnik
         self._pycurlObj.perform()
-        # Dekodiramo sporocilo
+        # Dekodiramo sporočilo
         msg = self._buffer.getvalue().decode()
-        # Izluscimo podatke iz JSON
+        # Izluščimo podatke iz JSON
         try:
             return ujson.loads(msg)
         except ValueError as err:
@@ -133,7 +133,7 @@ class Connection():
 
     def test_delay(self, num_iters: int = 10):
         """
-        Merjenje zakasnitve pri pridobivanju podatkov o tekmi s streznika. 
+        Merjenje zakasnitve pri pridobivanju podatkov o tekmi s strežnika. 
         Zgolj informativno.
         """
         sum_time = 0
@@ -149,7 +149,7 @@ class Connection():
 class PID():
     """
     Implementacija algoritma za regulacijo PID.
-    Nekaj virov za razjasnitev osnovnega nacela delovanja:
+    Nekaj virov za razjasnitev osnovnega načela delovanja:
         - https://en.wikipedia.org/wiki/PID_controller
         - https://www.csimn.com/CSI_pages/PIDforDummies.html
         - https://blog.opticontrols.com/archives/344
@@ -164,18 +164,18 @@ class PID():
             Kd: float = None,
             integral_limit: float = None):
         """
-        Ustvarimo nov regulator PID s pripadajocimi parametri.
+        Ustvarimo nov regulator PID s pripadajočimi parametri.
 
         Argumenti:
         setpoint: ciljna vrednost regulirane spremenljivke
-        Kp: ojacitev proporcionalnega dela regulatorja.
-            Visoke vrednosti pomenijo hitrejsi odziv sistema,
-            vendar previsoke vrednosti povzrocijo oscilacije in nestabilnost.
-        Ki: ojacitev integralnega clena regulatorja.
-            Iznici napako v ustaljenem stanju. Zmanjsa odzivnost.
-        Kd: ojacitev odvoda napake.
-            Zmanjsa cas umirjanja in poveca odzivnost.
-        integral_limit: najvisja vrednost integrala
+        Kp: ojačitev proporcionalnega dela regulatorja.
+            Visoke vrednosti pomenijo hitrejši odziv sistema,
+            vendar previsoke vrednosti povzročijo oscilacije in nestabilnost.
+        Ki: ojačitev integralnega člena regulatorja.
+            Izniči napako v ustaljenem stanju. Zmanjša odzivnost.
+        Kd: ojačitev odvoda napake.
+            Zmanjša čas umirjanja in poveča odzivnost.
+        integral_limit: najvišja vrednost integrala
         """
         self._setpoint = setpoint
         self._Kp = Kp
@@ -197,7 +197,7 @@ class PID():
         """
         Ponastavitev regulatorja. 
         Lahko mu tudi spremenimo katero od vrednosti parametrov.
-        Napaka, integral napake in cas se ponastavijo.
+        Napaka, integral napake in čas se ponastavijo.
         """
         if setpoint is not None:
             self._setpoint = setpoint
@@ -216,48 +216,48 @@ class PID():
 
     def update(self, measurement: float) -> float:
         """
-        Izracunamo vrednost izhoda regulatorja (regulirna velicina) 
-        glede na izmerjeno vrednost regulirane velicine (measurement) 
+        Izračunamo vrednost izhoda regulatorja (regulirna veličina) 
+        glede na izmerjeno vrednost regulirane veličine (measurement) 
         in ciljno vrednost (setpoint).
 
         Argumenti:
-        measurement: s tipali izmerjena vrednost regulirane velicine
+        measurement: s tipali izmerjena vrednost regulirane veličine
 
         Izhodna vrednost:
-        regulirna velicina, s katero zelimo popraviti delovanje sistema 
-        (regulirano velicino), da bo dosegel ciljno vrednost
+        regulirna veličina, s katero želimo popraviti delovanje sistema 
+        (regulirano veličino), da bo dosegel ciljno vrednost
         """
         if self._value is None:
-            # Na zacetku se nimamo zgodovine meritev, zato inicializiramo
-            # integral in vrnemo samo proporcionalni clen.
+            # Na začetku še nimamo zgodovine meritev, zato inicializiramo
+            # integral in vrnemo samo proporcionalni člen.
             self._value = measurement
-            # Zapomnimo si zacetni cas.
+            # Zapomnimo si začetni čas.
             self._time = time()
             # Ponastavimo integral napake.
             self._integral = 0
-            # Napaka = ciljna vrednost - izmerjena vrednost regulirane velicine.
+            # Napaka = ciljna vrednost - izmerjena vrednost regulirane veličine.
             self._error = self._setpoint - measurement
             return self._Kp * self._error
         else:
-            # Sprememba casa
+            # Sprememba časa
             time_now = time()
             delta_time = time_now - self._time
             self._time = time_now
-            # Izmerjena vrednost regulirane velicine.
+            # Izmerjena vrednost regulirane veličine.
             self._value = measurement
-            # Napaka = ciljna vrednost - izmerjena vrednost regulirane velicine.
+            # Napaka = ciljna vrednost - izmerjena vrednost regulirane veličine.
             error = self._setpoint - self._value
 
             # Proporcionalni del
             P = self._Kp * error
 
-            # Integralni in odvodni clen sta opcijska.
+            # Integralni in odvodni člen sta opcijska.
             if self._Ki is None:
                 I = 0
             else:
-                # Integral se poveca za (sprememba napake) / (sprememba casa).
+                # Integral se poveča za (sprememba napake) / (sprememba časa).
                 self._integral += error * delta_time
-                # Ojacitev integralnega dela.
+                # Ojačitev integralnega dela.
                 I = self._Ki * self._integral
                 if self._integral_limit is not None:
                     # Omejimo integralni del.
@@ -267,26 +267,24 @@ class PID():
             if self._Kd is None:
                 D = 0
             else:
-                # Odvod napake z ojacitvijo.
+                # Odvod napake z ojačitvijo.
                 D = self._Kd * (error - self._error) / delta_time
             # Posodobimo napako.
             self._error = error
-            # Vrnemo regulirno velicino, sestavljeno iz proporcionalnega,
-            # integralnega in odvodnega clena.
+            # Vrnemo regulirno veličino, sestavljeno iz proporcionalnega,
+            # integralnega in odvodnega člena.
             return P + I + D
 
 
 class Point():
     """
-    Tocka na poligonu.
+    Točka na poligonu.
     """
     #TODO: implement __add__, __sub__, __eq__
 
     def __init__(self, position):
         self.x = position['x']
         self.y = position['y']
-        self.tip = None
-
 
     def __str__(self):
         return '('+str(self.x)+', '+str(self.y)+')'
@@ -294,8 +292,8 @@ class Point():
 
 def get_angle(p1, a1, p2) -> float:
     """
-    Izracunaj kot, za katerega se mora zavrteti robot, da bo obrnjen proti tocki p2.
-    Robot se nahaja v tocki p1 in ima smer (kot) a1.
+    Izračunaj kot, za katerega se mora zavrteti robot, da bo obrnjen proti točki p2.
+    Robot se nahaja v točki p1 in ima smer (kot) a1.
     """
     a = math.degrees(math.atan2(p2.y-p1.y, p2.x - p1.x))
     a_rel = a - a1
@@ -310,7 +308,7 @@ def get_angle(p1, a1, p2) -> float:
 
 def get_distance(p1: Point, p2: Point) -> float:
     """
-    Evklidska razdalja med dvema tockama na poligonu.
+    Evklidska razdalja med dvema točkama na poligonu.
     """
     return math.sqrt((p2.x-p1.x)**2 + (p2.y-p1.y)**2)
 
@@ -344,7 +342,7 @@ def init_sensor_touch() -> TouchSensor:
 
 def wait_for_button(btn_name: str = 'down'):
     """
-    cakaj v zanki dokler ni gumb z imenom `btn_name` pritisnjen in nato sproscen.
+    Čakaj v zanki dokler ni gumb z imenom `btn_name` pritisnjen in nato sproščen.
     """
     while not getattr(btn, btn_name):
         pass
@@ -356,16 +354,16 @@ def wait_for_button(btn_name: str = 'down'):
 
 def beep(duration=1000, freq=440):
     """
-    Potrobi s frekvenco `freq` za cas `duration`. Klic ne blokira.
+    Potrobi s frekvenco `freq` za čas `duration`. Klic ne blokira.
     """
     Sound.tone(freq, duration)
-    # ce zelimo, da blokira, dokler se pisk ne konca.
+    # Če želimo, da blokira, dokler se pisk ne konča.
     #Sound.tone(freq, duration).wait()
 
 
 def robot_die():
     """
-    Koncaj s programom na robotu. Ustavi motorje.
+    Končaj s programom na robotu. Ustavi motorje.
     """
     print('KONEC')
     motor_left.stop(stop_action='brake')
@@ -378,7 +376,7 @@ def robot_die():
 
 
 # -----------------------------------------------------------------------------
-# NASTAVITVE TIPAL, MOTORJEV IN POVEZAVE S STREzNIKOM
+# NASTAVITVE TIPAL, MOTORJEV IN POVEZAVE S STREŽNIKOM
 # -----------------------------------------------------------------------------
 # Nastavimo tipala in gumbe.
 print('Priprava tipal ... ', end='', flush=True)
@@ -391,18 +389,15 @@ print('Priprava motorjev ... ', end='')
 
 motor_left = init_large_motor(MOTOR_LEFT_PORT)
 motor_right = init_large_motor(MOTOR_RIGHT_PORT)
-
-
-cs = ColorSensor()
 print('OK!')
 
-# Nastavimo povezavo s streznikom.
+# Nastavimo povezavo s strežnikom.
 url = SERVER_URL + GAME_ID
 print('Vzpostavljanje povezave z naslovom ' + url + ' ... ', end='', flush=True)
 conn = Connection(url)
 print('OK!')
 
-# Informativno izmerimo zakasnitev pri pridobivanju podatkov (povprecje num_iters meritev)
+# Informativno izmerimo zakasnitev pri pridobivanju podatkov (povprečje num_iters meritev)
 print('Zakasnitev v komunikaciji s streznikom ... ', end='', flush=True)
 print('%.4f s' % (conn.test_delay(num_iters=10)))
 
@@ -411,9 +406,8 @@ print('%.4f s' % (conn.test_delay(num_iters=10)))
 # PRIPRAVA NA TEKMO
 # -----------------------------------------------------------------------------
 # Pridobimo podatke o tekmi.
-
 game_state = conn.request()
-# Ali nas robot sploh tekmuje? ce tekmuje, ali je rdeca ali modra ekipa?
+# Ali naš robot sploh tekmuje? Če tekmuje, ali je rdeča ali modra ekipa?
 if ROBOT_ID not in game_state['teams']:
     print('Robot v tekmi', game_state['id'], 'ne tekmuje.')
     robot_die()
@@ -421,70 +415,34 @@ if ROBOT_ID not in game_state['teams']:
 my_color = game_state['teams'][ROBOT_ID]['color']
 print('Robot tekmuje v ekipi:', my_color)
 
-# Doloci cilje za robota (seznam tock na poligonu).
-# Nasem primeru se bo vozil po notranjih kotih obeh kosar, vmes pa bo obiskal polnilno postajo
-# Izracunajmo sredisce polnilne postaje 1
-# chrg_st_1 = game_state['fields']['charging_station_1']
-# chrg_st_1_center_x = (chrg_st_1['top_right']['x'] + chrg_st_1['top_left']['x']) / 2
-# chrg_st_1_center_y = (chrg_st_1['bottom_right']['y'] + chrg_st_1['top_right']['y']) / 2
-# chrg_st_1_center = Point({'x': chrg_st_1_center_x, 'y': chrg_st_1_center_y})
+# Določi cilje za robota (seznam točk na poligonu).
+# Našem primeru se bo vozil po notranjih kotih obeh košar, vmes pa bo obiskal polnilno postajo
+# Izračunajmo središče polnilne postaje 1
+chrg_st_1 = game_state['fields']['charging_station_1']
+chrg_st_1_center_x = (chrg_st_1['top_right']['x'] + chrg_st_1['top_left']['x']) / 2
+chrg_st_1_center_y = (chrg_st_1['bottom_right']['y'] + chrg_st_1['top_right']['y']) / 2
+chrg_st_1_center = Point({'x': chrg_st_1_center_x, 'y': chrg_st_1_center_y})
 
-# chrg_st_2 = game_state['fields']['charging_station_2']
-# chrg_st_2_center_x = (chrg_st_2['top_right']['x'] + chrg_st_2['top_left']['x']) / 2
-# chrg_st_2_center_y = (chrg_st_2['bottom_right']['y'] + chrg_st_2['top_right']['y']) / 2
-# chrg_st_2_center = Point({'x': chrg_st_2_center_x, 'y': chrg_st_2_center_y})
-
-# targets_list = [
-#     Point(game_state['fields']['blue_basket']['bottom_right']),
-#     Point(game_state['fields']['blue_basket']['top_right']),
-#     chrg_st_2_center,
-#     Point(game_state['fields']['red_basket']['top_left']),
-#     Point(game_state['fields']['red_basket']['bottom_left']),
-#     chrg_st_2_center,
-# ]
-# print('Seznam ciljnih tock:')
-# for trgt in targets_list:
-#     print('\t' + str(trgt))
-
-# targets_labels = [
-#     'blue_basket_bottom_right',
-#     'blue_basket_top_right',
-#     'charging_station',
-#     'red_basket_top_left',
-#     'red_basket_bottom_left',
-#     'charging_station',
-#     ]
-
-targets_list = []
-targets_labels = []
-for ruda in game_state['objects']:
-    # targets_list.append(Point(game_state["objects"][ruda]["position"], "object", ruda))
-    p = Point(game_state["objects"][ruda]["position"])
-    p.tip = "object"
-    targets_list.append(p)
-    targets_labels.append(ruda)
-
-basket = Point(game_state['fields']['blue_basket']['bottom_right'])
-# targets_list = [
-#     Point(game_state['fields']['blue_basket']['bottom_right']),
-#     Point(game_state['fields']['blue_basket']['top_right']),
-#     chrg_st_2_center,
-#     Point(game_state['fields']['red_basket']['top_left']),
-#     Point(game_state['fields']['red_basket']['bottom_left']),
-#     chrg_st_2_center,
-# ]
+targets_list = [
+    Point(game_state['fields']['blue_basket']['bottom_right']),
+    Point(game_state['fields']['blue_basket']['top_right']),
+    chrg_st_1_center,
+    Point(game_state['fields']['red_basket']['top_left']),
+    Point(game_state['fields']['red_basket']['bottom_left']),
+    chrg_st_1_center,
+]
 print('Seznam ciljnih tock:')
 for trgt in targets_list:
     print('\t' + str(trgt))
 
-# targets_labels = [
-#     'blue_basket_bottom_right',
-#     'blue_basket_top_right',
-#     'charging_station',
-#     'red_basket_top_left',
-#     'red_basket_bottom_left',
-#     'charging_station',
-#     ]
+targets_labels = [
+    'blue_basket_bottom_right',
+    'blue_basket_top_right',
+    'charging_station',
+    'red_basket_top_left',
+    'red_basket_bottom_left',
+    'charging_station',
+    ]
 
 # -----------------------------------------------------------------------------
 # GLAVNA ZANKA
@@ -492,17 +450,17 @@ for trgt in targets_list:
 print('Izvajam glavno zanko. Prekini jo s pritiskom na tipko DOL.')
 print('Cakam na zacetek tekme ...')
 
-# Zacetno stanje.
+# Začetno stanje.
 state = State.IDLE
-# Prejsnje stanje.
+# Prejšnje stanje.
 state_old = -1
 # Indeks trenutne ciljne lokacije.
 target_idx = 0
 
-# Regulator PID za obracanje na mestu.
+# Regulator PID za obračanje na mestu.
 # setpoint=0 pomeni, da naj bo kot med robotom in ciljem (target_angle) enak 0.
-# Nasa regulirana velicina je torej kar napaka kota, ki mora biti 0.
-# To velja tudi za regulacijo voznje naravnost.
+# Naša regulirana veličina je torej kar napaka kota, ki mora biti 0.
+# To velja tudi za regulacijo vožnje naravnost.
 PID_turn = PID(
     setpoint=0,
     Kp=PID_TURN_KP,
@@ -510,7 +468,7 @@ PID_turn = PID(
     Kd=PID_TURN_KD,
     integral_limit=PID_TURN_INT_MAX)
 
-# PID za voznjo naravnost - regulira nazivno hitrost za oba motorja,
+# PID za vožnjo naravnost - regulira nazivno hitrost za oba motorja,
 # ki je odvisna od oddaljenosti od cilja.
 # setpoint=0 pomeni, da mora biti razdalja med robotom in ciljem enaka 0.
 PID_frwd_base = PID(
@@ -520,7 +478,7 @@ PID_frwd_base = PID(
     Kd=PID_STRAIGHT_KD,
     integral_limit=PID_STRAIGHT_INT_MAX)
 
-# PID za obracanje med voznjo naravnost.
+# PID za obračanje med vožnjo naravnost.
 # setpoint=0 pomeni, da naj bo kot med robotom in ciljem (target_angle) enak 0.
 PID_frwd_turn = PID(
     setpoint=0,
@@ -538,8 +496,8 @@ speed_left = 0
 robot_dir_hist = deque([180.0] * HIST_QUEUE_LENGTH)
 robot_dist_hist = deque([math.inf] * HIST_QUEUE_LENGTH)
 
-# Merimo cas obhoda zanke. Za visoko odzivnost robota je zelo pomembno,
-# da je ta cas cim krajsi.
+# Merimo čas obhoda zanke. Za visoko odzivnost robota je zelo pomembno,
+# da je ta čas čim krajši.
 t_old = time()
 
 do_main_loop = True
@@ -560,21 +518,21 @@ while do_main_loop and not btn.down:
     # Iz seznama ciljev izberi naslednjega.
     target = targets_list[target_idx]
 
-    # Osvezi stanje tekme.
+    # Osveži stanje tekme.
     game_state = conn.request()
     if game_state == -1:
         print('Napaka v paketu, ponovni poskus ...')
     else:
-        # Ali tekma tece?
+        # Ali tekma teče?
         game_on = game_state['game_on']
-        # Ali je tekma zacasno zaustavljena?
+        # Ali je tekma začasno zaustavljena?
         game_paused = game_state['game_paused']
-        # Koliko casa je do konca tekme?
+        # Koliko časa je do konca tekme?
         time_left = game_state['time_left']
-        # Koliko goriva ima se moj robot? (merjeno v casu)
+        # Koliko goriva ima še moj robot? (merjeno v času)
         fuel = game_state['teams'][ROBOT_ID]['fuel']
         # Za testiranje lahko to ignoriramo po francosko
-        fuel = 100
+        #fuel = 100
 
         # Pridobi pozicijo in orientacijo svojega robota
         if ROBOT_ID in game_state['robots']:
@@ -582,11 +540,11 @@ while do_main_loop and not btn.down:
             robot_dir = game_state['robots'][ROBOT_ID]['dir']
             robot_data_valid = True
         else:
-            # Sistem nima podatkov o nasem robotu, morda ne zazna oznake na robotu.
+            # Sistem nima podatkov o našem robotu, morda ne zazna oznake na robotu.
             robot_data_valid = False
 
-        # ce tekma poteka in ni zaustavljena in so podatki robota na voljo in robot ima se kaj goriva,
-        # potem izracunamo novo hitrost na motorjih.
+        # Če tekma poteka in ni zaustavljena in so podatki robota na voljo in robot ima še kaj goriva,
+        # potem izračunamo novo hitrost na motorjih.
         # Sicer motorje ustavimo.
         if game_on and not game_paused and robot_data_valid and fuel > 0:
             # Razdalja med robotom in ciljem.
@@ -595,68 +553,50 @@ while do_main_loop and not btn.down:
             target_angle = get_angle(robot_pos, robot_dir, target)
 
             # Spremljaj zgodovino meritev kota in oddaljenosti.
-            # Odstrani najstarejsi element in dodaj novega - princip FIFO.
+            # Odstrani najstarejši element in dodaj novega - princip FIFO.
             robot_dir_hist.popleft()
             robot_dir_hist.append(target_angle)
             robot_dist_hist.popleft()
             robot_dist_hist.append(target_dist)
 
             if state == State.IDLE:
-                # Stanje mirovanja - tu se odlocamo, kaj bo robot sedaj pocel.
+                # Stanje mirovanja - tu se odločamo, kaj bo robot sedaj počel.
                 speed_right = 0
                 speed_left = 0
-                
-                robot_pos = Point(game_state['robots'][ROBOT_ID]['position'])
-                target_dist = get_distance(robot_pos, target)
-                robot_near_target = target_dist < DIST_NEAR
-                print(robot_near_target)
                                 
-                print(cs.color)       
-                if robot_near_target and cs.color in [3,7] and targets_list[target_idx].tip == "object":
-                    print(cs.color)
-                    state = State.LOAD_NEXT_TARGET
-                    if cs.color == 7:
-                        print("Brown")
-                    elif cs.color == 3:
-                        print("Green")
-                        targets_list[target_idx] = basket
-                        target_idx -= 1
-                # Preverimo, ali je robot na ciljni tocki;
-                elif target_dist > DIST_EPS:
-                    # ce ni, ga tja posljemo -> gremo v stanje TURN
+                # Preverimo, ali je robot na ciljni točki;
+                if target_dist > DIST_EPS:
+                    # če ni, ga tja pošljemo -> gremo v stanje TURN
                     state = State.TURN
                     robot_near_target_old = False
                 else:
-                    # ce je, nalozimo naslednji cilj, razen ...
+                    # če je, naložimo naslednji cilj, razen ...
                     state = State.LOAD_NEXT_TARGET
-                    # ... ce je robot na polnilni postaji.
+                    # ... če je robot na polnilni postaji.
                     if targets_labels[target_idx] == 'charging_station':
-                        # Pocakaj do napolnjenosti.
+                        # Počakaj do napolnjenosti.
                         if fuel < 20:
-                            state = State.IDLE
-                    
-                    
-                                              
+                            state = State.IDLE                    
 
             elif state == State.LOAD_NEXT_TARGET:
-                # Nalozimo naslednjo ciljno tocko iz seznama.
+                # Naložimo naslednjo ciljno točko iz seznama.
                 target_idx = target_idx + 1
-                # ce smo prisli do konca seznama, gremo spet od zacetka
+                # Če smo prišli do konca seznama, gremo spet od začetka
                 if target_idx >= len(targets_list):
                     target_idx = 0
                 print(targets_labels[target_idx])
-                # Gremo v stanje IDLE, da preverimo, ali smo morda ze kar na cilju.
+                # Gremo v stanje IDLE, da preverimo, ali smo morda že kar na cilju.
                 state = State.IDLE
 
             elif state == State.TURN:
-                # Obracanje robota na mestu, da bo obrnjen proti cilju.
+                # Obračanje robota na mestu, da bo obrnjen proti cilju.
                 if state_changed:
-                    # ce smo ravno prisli v to stanje, najprej ponastavimo PID.
+                    # Če smo ravno prišli v to stanje, najprej ponastavimo PID.
                     PID_turn.reset()
 
-                # Ali smo ze dosegli ciljni kot?
+                # Ali smo že dosegli ciljni kot?
                 # Zadnjih nekaj obhodov zanke mora biti absolutna vrednost
-                # napake kota manjsa od DIR_EPS.
+                # napake kota manjša od DIR_EPS.
                 err = [abs(a) > DIR_EPS for a in robot_dir_hist]
 
                 if sum(err) == 0:
@@ -665,35 +605,35 @@ while do_main_loop and not btn.down:
                     speed_left = 0
                     state = State.DRIVE_STRAIGHT
                 else:
-                    # Reguliramo obracanje.
-                    # Ker se v regulatorju trenutna napaka izracuna kot:
+                    # Reguliramo obračanje.
+                    # Ker se v regulatorju trenutna napaka izračuna kot:
                     #   error = setpoint - measurement,
                     # dobimo negativno vrednost, ko se moramo zavrteti
                     # v pozitivno smer.
                     # Primer:
                     #   Robot ima smer 90 stopinj (obrnjen je proti "severu").
-                    #   Cilj se nahaja na njegovi levi in da ga doseze,
+                    #   Cilj se nahaja na njegovi desni ("vzhod") in da ga doseže,
                     #   se mora obrniti za 90 stopinj.
                     #       setpoint=0
                     #       target_angle = measurement = 90
                     #       error = setpoint - measurement = -90
                     #       u = funkcija, odvisna od error in parametrov PID.
-                    #   ce imamo denimo Kp = 1, Ki = Kd = 0, potem bo u = -90.
+                    #   Če imamo denimo Kp = 1, Ki = Kd = 0, potem bo u = -90.
                     #   Robot se mora zavrteti v pozitivno smer,
-                    #   torej z desnim kolesom naprej in levim nazaj.
+                    #   torej z desnim kolesom nazaj in levim naprej.
                     #   Zato:
-                    #   speed_right = -u
-                    #   speed_left = u
+                    #   speed_right = u
+                    #   speed_left = -u
                     #   Lahko bi tudi naredili droben trik in bi rekli:
-                    #       measurement= -target_angle.
+                    #       measurement = -target_angle.
                     #   V tem primeru bi bolj intuitivno nastavili
-                    #   speed_right = u in speed_left = -u.
+                    #   speed_right = -u in speed_left = u.
                     u = PID_turn.update(measurement=target_angle)
                     speed_right = u
                     speed_left = -u
 
             elif state == State.DRIVE_STRAIGHT:
-                # Voznja robota naravnost proti ciljni tocki.
+                # Vožnja robota naravnost proti ciljni točki.
                 # Vmes bi radi tudi zavijali, zato uporabimo dva regulatorja.
                 if state_changed:
                     # Ponastavi regulatorja PID.
@@ -704,22 +644,18 @@ while do_main_loop and not btn.down:
                 # Ali smo blizu cilja?
                 robot_near_target = target_dist < DIST_NEAR
                 if not robot_near_target_old and robot_near_target:
-                    # Vstopili smo v blizino cilja.
-                    # Zacnimo odstevati varnostno budilko.
+                    # Vstopili smo v bližino cilja.
+                    # Začnimo odštevati varnostno budilko.
                     timer_near_target = TIMER_NEAR_TARGET
                 if robot_near_target:
                     timer_near_target = timer_near_target - loop_time
                 robot_near_target_old = robot_near_target
 
-                # Ali smo ze na cilju?
+                # Ali smo že na cilju?
                 # Zadnjih nekaj obhodov zanke mora biti razdalja do cilja
-                # manjsa ali enaka DIST_EPS.
+                # manjša ali enaka DIST_EPS.
                 err_eps = [d > DIST_EPS for d in robot_dist_hist]
-                
-                robot_pos = Point(game_state['robots'][ROBOT_ID]['position'])
-                target_dist = get_distance(robot_pos, target)
-                robot_near_target = target_dist < DIST_NEAR
-                if sum(err_eps) == 0 or (robot_near_target and cs.color in [3,7] and targets_list[target_idx].tip == "object"):
+                if sum(err_eps) == 0:
                     # Razdalja do cilja je znotraj tolerance, zamenjamo stanje.
                     speed_right = 0
                     speed_left = 0
@@ -731,16 +667,16 @@ while do_main_loop and not btn.down:
                     state = State.TURN
                 else:
                     u_turn = PID_frwd_turn.update(measurement=target_angle)
-                    # Ker je napaka izracunana kot setpoint - measurement in
+                    # Ker je napaka izračunana kot setpoint - measurement in
                     # smo nastavili setpoint na 0, bomo v primeru u_base dobili
                     # negativne vrednosti takrat, ko se bo robot moral premikati
-                    # naprej. Zato dodamo minus pri izracunu hitrosti motorjev.
+                    # naprej. Zato dodamo minus pri izračunu hitrosti motorjev.
                     u_base = PID_frwd_base.update(measurement=target_dist)
                     # Omejimo nazivno hitrost, ki je enaka za obe kolesi,
-                    # da imamo se manevrski prostor za zavijanje.
+                    # da imamo še manevrski prostor za zavijanje.
                     u_base = min(max(u_base, -SPEED_BASE_MAX), SPEED_BASE_MAX)
-                    speed_right = -u_base + u_turn
-                    speed_left = -u_base - u_turn
+                    speed_right = -u_base - u_turn
+                    speed_left = -u_base +u_turn
 
             # Omejimo vrednosti za hitrosti na motorjih.
             speed_right = round(
@@ -754,12 +690,12 @@ while do_main_loop and not btn.down:
                                 SPEED_MAX)
                             )
 
-            # Izracunane hitrosti zapisemo na motorje.
-            motor_right.run_forever(speed_sp=-speed_right)
-            motor_left.run_forever(speed_sp=-speed_left)
+            # Izračunane hitrosti zapišemo na motorje.
+            motor_right.run_forever(speed_sp=speed_right)
+            motor_left.run_forever(speed_sp=speed_left)
 
         else:
-            # Robot bodisi ni viden na kameri bodisi tekma ne tece, 
+            # Robot bodisi ni viden na kameri bodisi tekma ne teče, 
             # zato ustavimo motorje.
             motor_left.stop(stop_action='brake')
             motor_right.stop(stop_action='brake')
