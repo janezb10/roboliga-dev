@@ -290,7 +290,7 @@ class Point():
 
     def __str__(self):
         return '('+str(self.x)+', '+str(self.y)+')'
- 
+    
 
 def get_angle(p1, a1, p2) -> float:
     """
@@ -421,18 +421,19 @@ if ROBOT_ID not in game_state['teams']:
 my_color = game_state['teams'][ROBOT_ID]['color']
 print('Robot tekmuje v ekipi:', my_color)
 
+
 # Doloci cilje za robota (seznam tock na poligonu).
 # Nasem primeru se bo vozil po notranjih kotih obeh kosar, vmes pa bo obiskal polnilno postajo
 # Izracunajmo sredisce polnilne postaje 1
-# chrg_st_1 = game_state['fields']['charging_station_1']
-# chrg_st_1_center_x = (chrg_st_1['top_right']['x'] + chrg_st_1['top_left']['x']) / 2
-# chrg_st_1_center_y = (chrg_st_1['bottom_right']['y'] + chrg_st_1['top_right']['y']) / 2
-# chrg_st_1_center = Point({'x': chrg_st_1_center_x, 'y': chrg_st_1_center_y})
+chrg_st_1 = game_state['fields']['charging_station_1']
+chrg_st_1_center_x = (chrg_st_1['top_right']['x'] + chrg_st_1['top_left']['x']) / 2
+chrg_st_1_center_y = (chrg_st_1['bottom_right']['y'] + chrg_st_1['top_right']['y']) / 2
+chrg_st_1_center = Point({'x': chrg_st_1_center_x, 'y': chrg_st_1_center_y})
 
-# chrg_st_2 = game_state['fields']['charging_station_2']
-# chrg_st_2_center_x = (chrg_st_2['top_right']['x'] + chrg_st_2['top_left']['x']) / 2
-# chrg_st_2_center_y = (chrg_st_2['bottom_right']['y'] + chrg_st_2['top_right']['y']) / 2
-# chrg_st_2_center = Point({'x': chrg_st_2_center_x, 'y': chrg_st_2_center_y})
+chrg_st_2 = game_state['fields']['charging_station_2']
+chrg_st_2_center_x = (chrg_st_2['top_right']['x'] + chrg_st_2['top_left']['x']) / 2
+chrg_st_2_center_y = (chrg_st_2['bottom_right']['y'] + chrg_st_2['top_right']['y']) / 2
+chrg_st_2_center = Point({'x': chrg_st_2_center_x, 'y': chrg_st_2_center_y})
 
 # targets_list = [
 #     Point(game_state['fields']['blue_basket']['bottom_right']),
@@ -455,6 +456,8 @@ print('Robot tekmuje v ekipi:', my_color)
 #     'charging_station',
 #     ]
 
+
+
 targets_list = []
 targets_labels = []
 for ruda in game_state['objects']:
@@ -464,7 +467,32 @@ for ruda in game_state['objects']:
     targets_list.append(p)
     targets_labels.append(ruda)
 
-basket = Point(game_state['fields']['blue_basket']['bottom_right'])
+blue_bottom_right = Point(game_state['fields']['blue_basket']['bottom_right'])
+blue_top_left = Point(game_state['fields']['blue_basket']['top_left'])
+blue_top_right = Point(game_state['fields']['blue_basket']['top_right'])
+blue_bottom_left = Point(game_state['fields']['blue_basket']['bottom_left'])
+
+red_bottom_right = Point(game_state['fields']['red_basket']['bottom_right'])
+red_top_left = Point(game_state['fields']['red_basket']['top_left'])
+red_top_right = Point(game_state['fields']['red_basket']['top_right'])
+red_bottom_left = Point(game_state['fields']['red_basket']['bottom_left'])
+
+# nastavi svoj basket kot center basketa tvoje barve
+if my_color == 'blue':
+    basket_bottom_right = blue_bottom_right
+    basket_top_left = blue_top_left
+    basket_top_right = blue_top_right
+    basket_bottom_left = blue_bottom_left
+else:
+    basket_bottom_right = red_bottom_right
+    basket_top_left = red_top_left
+    basket_top_right = red_top_right
+    basket_bottom_left = red_bottom_left
+
+basket_center_x = (basket_top_right['x'] + basket_top_left['x']) / 2
+basket_center_y = (basket_bottom_right['y'] + basket_top_right['y']) / 2
+basket = Point({'x': basket_center_x, 'y': basket_center_y})
+
 # targets_list = [
 #     Point(game_state['fields']['blue_basket']['bottom_right']),
 #     Point(game_state['fields']['blue_basket']['top_right']),
