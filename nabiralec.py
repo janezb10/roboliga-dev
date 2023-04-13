@@ -513,9 +513,11 @@ def nastavi_targets():
         p.tip = "object"
         # v targets bo dodal le tiste, ki niso v bazi
         if(isInBasket(p)):
+            print(p, " is in basket")
             continue
         # ne bo dodal rjavih kock
         if(game_state["objects"][ruda]["id"] in id_rjave):
+            print(p, " is brown")
             continue
         targets_list.append(p)
         targets_labels.append(ruda)
@@ -780,8 +782,14 @@ while do_main_loop and not btn.down:
                 # robot_pos = Point(game_state['robots'][ROBOT_ID]['position'])
                 # target_dist = get_distance(robot_pos, target)
                 # robot_near_target = target_dist < DIST_NEAR
-                if sum(err_eps) == 0 or (cs.color in [3,7] and targets_list[target_idx].tip == "object"):
+                if sum(err_eps) == 0:
                     # Razdalja do cilja je znotraj tolerance, zamenjamo stanje.
+                    speed_right = 0
+                    speed_left = 0
+                    if (cs.color == 7):
+                        id_rjave.append(targets_labels[target_idx])
+                    state = State.IDLE
+                elif (cs.color in [3,7] and targets_list[target_idx].tip == "object"):
                     speed_right = 0
                     speed_left = 0
                     state = State.IDLE
@@ -791,6 +799,7 @@ while do_main_loop and not btn.down:
                     speed_left = 0
                     t_back = 0
                     state = State.DRIVE_BACK
+                    target_idx+=1
                 elif timer_near_target < 0:
                     # Smo morda blizu cilja in je varnostna budilka potekla?
                     speed_right = 0
@@ -810,8 +819,8 @@ while do_main_loop and not btn.down:
                     speed_left = -u_base - u_turn
             elif state == State.DRIVE_BACK:
                 u_base = PID_frwd_base.update(measurement=target_dist)
-                print("u_base: "+ str(u_base))
-                t_back_stop = 0.5
+                # print("u_base: "+ str(u_base))
+                t_back_stop = 0.8
                 # if cs.color == 7:
                 #     t_back = 0
                 # else:
@@ -822,21 +831,19 @@ while do_main_loop and not btn.down:
                     speed_right = 0
                     speed_left = 0
                     state = State.TURN_AWAY
-                    curr_angle = None
+                    t_away = 0
                     
             elif state == State.TURN_AWAY:
-                if curr_angle is None:
-                    end_angle = (game_state['robots'][ROBOT_ID]['dir'] + 90)%360
-                curr_angle = game_state['robots'][ROBOT_ID]['dir']
-                
-                TOL_TURN_MY = 20
-                if end_angle - TOL_TURN_MY  > curr_angle and curr_angle > end_angle + TOL_TURN_MY:
-                    state = State.IDLE
-                u_turn = PID_frwd_turn.update(measurement=target_angle)
-                print("u_turn: "+ str(u_turn))
+                time_away_stop = 0.8
+                t_away += loop_time
                 U = 100
                 speed_right = U
                 speed_left = -U
+                if t_away > time_away_stop:
+                    speed_right = 0
+                    speed_left = 0
+                    state = State.IDLE
+                
                 
                 
 
