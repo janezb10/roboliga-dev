@@ -38,7 +38,7 @@ ROBOT_ID = "14"
 # URL igralnega streznika.
 SERVER_URL = "192.168.0.3:8088/game/"
 # stevilka ID igre, v kateri je robot.
-GAME_ID = "6948"
+GAME_ID = "b750"
 
 # Priklop motorjev na izhode.
 MOTOR_LEFT_PORT = 'outB'
@@ -638,7 +638,7 @@ while do_main_loop and not btn.down:
         # Koliko goriva ima se moj robot? (merjeno v casu)
         fuel = game_state['teams'][ROBOT_ID]['fuel']
         # Za testiranje lahko to ignoriramo po francosko
-        # fuel = 100
+        
 
         # Pridobi pozicijo in orientacijo svojega robota
         if ROBOT_ID in game_state['robots']:
@@ -655,13 +655,19 @@ while do_main_loop and not btn.down:
         if game_on and not game_paused and robot_data_valid and fuel > 0:
             # ce ima manj kot 7 sekund fuel pojdi na charging station (nato bo sel na naslednje stanje)
             if fuel < 7:
+                print("manj kot 7 gorivo")
                 if (inChargingStation(robot_pos)):
                     state = State.IDLE
                 elif (targets_labels[target_idx] != 'charging_station'):
-                    target_idx -= 1
-                    targets_list[target_idx] = chrg_st_1_center
-                    target = targets_list[target_idx]
-                    targets_labels[target_idx] == 'charging_station'
+                    if target_idx == 0:
+                        targets_list.insert(0,chrg_st_1_center)
+                        target = targets_list[target_idx]
+                        targets_labels.insert(0,'charging_station')
+                    else:
+                        target_idx -= 1
+                        targets_list[target_idx] = chrg_st_1_center
+                        target = targets_list[target_idx]
+                        targets_labels[target_idx] == 'charging_station'
             
             # Razdalja med robotom in ciljem.
             target_dist = get_distance(robot_pos, target)
@@ -679,13 +685,7 @@ while do_main_loop and not btn.down:
                 # Stanje mirovanja - tu se odlocamo, kaj bo robot sedaj pocel.
                 speed_right = 0
                 speed_left = 0
-                
-                robot_pos = Point(game_state['robots'][ROBOT_ID]['position'])
-                target_dist = get_distance(robot_pos, target)
-                robot_near_target = target_dist < DIST_NEAR
-                print(robot_near_target)
-                                
-                print(cs.color)       
+                                                       
                 if cs.color in [3,7] and targets_list[target_idx].tip == "object":
                     print(cs.color)
                     state = State.LOAD_NEXT_TARGET
@@ -712,7 +712,11 @@ while do_main_loop and not btn.down:
                         # Pocakaj do napolnjenosti.
                         # fuel = game_state['teams'][ROBOT_ID]['fuel']
                         if fuel < 20:
+                            print("charging fuel...")
                             state = State.IDLE
+                        else:
+                            print("finished charging")
+                            target_idx += 1
                     
                     
                                               
@@ -805,17 +809,17 @@ while do_main_loop and not btn.down:
                     if (cs.color == 7):
                         id_rjave.append(targets_labels[target_idx])
                     state = State.IDLE
-                elif (cs.color in [3,7] and targets_list[target_idx].tip == "object"):
-                    speed_right = 0
-                    speed_left = 0
-                    state = State.IDLE
-                elif isInBasket(robot_pos):
+                elif isInBasket(robot_pos) and cs.color == 3:
                     #TODO unlock
                     speed_right = 0
                     speed_left = 0
                     t_back = 0
                     state = State.DRIVE_BACK
                     target_idx+=1
+                elif (cs.color in [3,7] and targets_list[target_idx].tip == "object"):
+                    speed_right = 0
+                    speed_left = 0
+                    state = State.IDLE
                 elif timer_near_target < 0:
                     # Smo morda blizu cilja in je varnostna budilka potekla?
                     speed_right = 0
@@ -880,13 +884,15 @@ while do_main_loop and not btn.down:
             motor_left.run_forever(speed_sp=-speed_left)
 
         else:
-            if(fuel <= 0):
-                print('no more fuel')
+            if(fuel <= 0 and not(game_on and not game_paused and robot_data_valid)):
+                print('no more fuel', fuel)
             # Robot bodisi ni viden na kameri bodisi tekma ne tece, 
             # zato ustavimo motorje.
             motor_left.stop(stop_action='brake')
             motor_right.stop(stop_action='brake')
             
+            
 
 # Konec programa
+print("robot_dies")
 robot_die()
