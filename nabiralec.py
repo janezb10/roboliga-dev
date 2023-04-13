@@ -435,6 +435,32 @@ chrg_st_2_center_x = (chrg_st_2['top_right']['x'] + chrg_st_2['top_left']['x']) 
 chrg_st_2_center_y = (chrg_st_2['bottom_right']['y'] + chrg_st_2['top_right']['y']) / 2
 chrg_st_2_center = Point({'x': chrg_st_2_center_x, 'y': chrg_st_2_center_y})
 
+blue_bottom_right = Point(game_state['fields']['blue_basket']['bottom_right'])
+blue_top_left = Point(game_state['fields']['blue_basket']['top_left'])
+blue_top_right = Point(game_state['fields']['blue_basket']['top_right'])
+blue_bottom_left = Point(game_state['fields']['blue_basket']['bottom_left'])
+
+red_bottom_right = Point(game_state['fields']['red_basket']['bottom_right'])
+red_top_left = Point(game_state['fields']['red_basket']['top_left'])
+red_top_right = Point(game_state['fields']['red_basket']['top_right'])
+red_bottom_left = Point(game_state['fields']['red_basket']['bottom_left'])
+
+# nastavi svoj basket kot center basketa tvoje barve
+if my_color == 'blue':
+    basket_bottom_right = blue_bottom_right
+    basket_top_left = blue_top_left
+    basket_top_right = blue_top_right
+    basket_bottom_left = blue_bottom_left
+else:
+    basket_bottom_right = red_bottom_right
+    basket_top_left = red_top_left
+    basket_top_right = red_top_right
+    basket_bottom_left = red_bottom_left
+
+basket_center_x = (basket_top_right.x + basket_top_left.x) / 2
+basket_center_y = (basket_bottom_right.y + basket_top_right.y) / 2
+basket = Point({'x': basket_center_x, 'y': basket_center_y})
+
 # targets_list = [
 #     Point(game_state['fields']['blue_basket']['bottom_right']),
 #     Point(game_state['fields']['blue_basket']['top_right']),
@@ -460,38 +486,35 @@ chrg_st_2_center = Point({'x': chrg_st_2_center_x, 'y': chrg_st_2_center_y})
 
 targets_list = []
 targets_labels = []
-for ruda in game_state['objects']:
-    # targets_list.append(Point(game_state["objects"][ruda]["position"], "object", ruda))
-    p = Point(game_state["objects"][ruda]["position"])
-    p.tip = "object"
-    targets_list.append(p)
-    targets_labels.append(ruda)
+# shrani vse kocke v targets_list
+# for ruda in game_state['objects']:
+#     # targets_list.append(Point(game_state["objects"][ruda]["position"], "object", ruda))
+#     p = Point(game_state["objects"][ruda]["position"])
+#     p.tip = "object"
+#     targets_list.append(p)
+#     targets_labels.append(ruda)
 
-blue_bottom_right = Point(game_state['fields']['blue_basket']['bottom_right'])
-blue_top_left = Point(game_state['fields']['blue_basket']['top_left'])
-blue_top_right = Point(game_state['fields']['blue_basket']['top_right'])
-blue_bottom_left = Point(game_state['fields']['blue_basket']['bottom_left'])
+# list of id of cubes
+id_zelene = []
+id_rjave = []
 
-red_bottom_right = Point(game_state['fields']['red_basket']['bottom_right'])
-red_top_left = Point(game_state['fields']['red_basket']['top_left'])
-red_top_right = Point(game_state['fields']['red_basket']['top_right'])
-red_bottom_left = Point(game_state['fields']['red_basket']['bottom_left'])
+def isInBasket(point: Point):
+    return point.x > basket_bottom_left.x and point.x < basket_bottom_right.x and point.y > blue_top_left.y 
 
-# nastavi svoj basket kot center basketa tvoje barve
-if my_color == 'blue':
-    basket_bottom_right = blue_bottom_right
-    basket_top_left = blue_top_left
-    basket_top_right = blue_top_right
-    basket_bottom_left = blue_bottom_left
-else:
-    basket_bottom_right = red_bottom_right
-    basket_top_left = red_top_left
-    basket_top_right = red_top_right
-    basket_bottom_left = red_bottom_left
+def nastavi_targets():
+    for ruda in game_state['objects']:
+        p = Point(game_state["objects"][ruda]["position"])
+        p.tip = "object"
+        # v targets bo dodal le tiste, ki niso v bazi
+        if(isInBasket(p)):
+            continue
+        # ne bo dodal rjavih kock
+        if(game_state["objects"][ruda]["id"] in id_rjave):
+            continue
+        targets_list.append(p)
+        targets_labels.append(ruda)
 
-basket_center_x = (basket_top_right['x'] + basket_top_left['x']) / 2
-basket_center_y = (basket_bottom_right['y'] + basket_top_right['y']) / 2
-basket = Point({'x': basket_center_x, 'y': basket_center_y})
+nastavi_targets()
 
 # targets_list = [
 #     Point(game_state['fields']['blue_basket']['bottom_right']),
