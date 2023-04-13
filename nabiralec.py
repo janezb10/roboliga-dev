@@ -505,7 +505,12 @@ id_zelene = []
 id_rjave = []
 
 def isInBasket(point: Point):
-    return point.x > basket_bottom_left.x and point.x < basket_bottom_right.x and point.y > blue_top_left.y 
+    return point.x > basket_bottom_left.x and point.x < basket_bottom_right.x and point.y > blue_top_left.y and point.y < blue_bottom_left.y 
+
+def inChargingStation(point: Point):
+    inStation1 = point.x > chrg_st_1['bottom_left']['x'] and point.x < chrg_st_1['bottom_right']['x'] and point.y > chrg_st_1['top_left']['y'] and point.y < chrg_st_1['bottom_left']['y']
+    inStation2 = point.x > chrg_st_2['bottom_left']['x'] and point.x < chrg_st_2['bottom_right']['x'] and point.y > chrg_st_2['top_left']['y'] and point.y < chrg_st_2['bottom_left']['y']
+    return inStation1 or inStation2
 
 def nastavi_targets():
     for ruda in game_state['objects']:
@@ -633,7 +638,7 @@ while do_main_loop and not btn.down:
         # Koliko goriva ima se moj robot? (merjeno v casu)
         fuel = game_state['teams'][ROBOT_ID]['fuel']
         # Za testiranje lahko to ignoriramo po francosko
-        fuel = 100
+        # fuel = 100
 
         # Pridobi pozicijo in orientacijo svojega robota
         if ROBOT_ID in game_state['robots']:
@@ -648,6 +653,16 @@ while do_main_loop and not btn.down:
         # potem izracunamo novo hitrost na motorjih.
         # Sicer motorje ustavimo.
         if game_on and not game_paused and robot_data_valid and fuel > 0:
+            # ce ima manj kot 7 sekund fuel pojdi na charging station (nato bo sel na naslednje stanje)
+            if fuel < 7:
+                if (inChargingStation(robot_pos)):
+                    state = State.IDLE
+                elif (targets_labels[target_idx] != 'charging_station'):
+                    target_idx -= 1
+                    targets_list[target_idx] = chrg_st_1_center
+                    target = targets_list[target_idx]
+                    targets_labels[target_idx] == 'charging_station'
+            
             # Razdalja med robotom in ciljem.
             target_dist = get_distance(robot_pos, target)
             # Kot med robotom in ciljem.
@@ -695,6 +710,7 @@ while do_main_loop and not btn.down:
                     # ... ce je robot na polnilni postaji.
                     if targets_labels[target_idx] == 'charging_station':
                         # Pocakaj do napolnjenosti.
+                        # fuel = game_state['teams'][ROBOT_ID]['fuel']
                         if fuel < 20:
                             state = State.IDLE
                     
@@ -864,10 +880,13 @@ while do_main_loop and not btn.down:
             motor_left.run_forever(speed_sp=-speed_left)
 
         else:
+            if(fuel <= 0):
+                print('no more fuel')
             # Robot bodisi ni viden na kameri bodisi tekma ne tece, 
             # zato ustavimo motorje.
             motor_left.stop(stop_action='brake')
             motor_right.stop(stop_action='brake')
+            
 
 # Konec programa
 robot_die()
