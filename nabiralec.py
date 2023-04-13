@@ -67,9 +67,11 @@ HIST_QUEUE_LENGTH = 3
 
 # Razdalje - tolerance
 # Dovoljena napaka v oddaljenosti do cilja [mm].
-DIST_EPS = 20
+DIST_EPS = 40#20
 # Dovoljena napaka pri obracanju [stopinje].
-DIR_EPS = 10
+DIR_EPS = 10#5
+
+
 # Blizina cilja [mm].
 DIST_NEAR = 100
 # Koliko sekund je robot lahko stanju voznje naravnost v blizini cilja
@@ -91,6 +93,8 @@ class State(Enum):
     LOAD_NEXT_TARGET = 3
     DRIVE_BACK = 4
     COLLISION_AVOIDANCE = 5
+    TURN_AWAY = 6
+    GO_TO_BASKET = 7
 
 
 class Connection():
@@ -669,10 +673,12 @@ while do_main_loop and not btn.down:
                     print(cs.color)
                     state = State.LOAD_NEXT_TARGET
                     if cs.color == 7:
-                        
                         print("Brown")
+                        target_idx += 1
+                        t_back = 0
                         state = State.DRIVE_BACK
                     elif cs.color == 3:
+                        #TODO lock
                         print("Green")
                         targets_list[target_idx] = basket
                         target_idx -= 1
@@ -778,7 +784,13 @@ while do_main_loop and not btn.down:
                     # Razdalja do cilja je znotraj tolerance, zamenjamo stanje.
                     speed_right = 0
                     speed_left = 0
-                    state = State.IDLE #State.LOAD_NEXT_TARGET
+                    state = State.IDLE
+                elif isInBasket(robot_pos):
+                    #TODO unlock
+                    speed_right = 0
+                    speed_left = 0
+                    t_back = 0
+                    state = State.DRIVE_BACK
                 elif timer_near_target < 0:
                     # Smo morda blizu cilja in je varnostna budilka potekla?
                     speed_right = 0
@@ -800,14 +812,32 @@ while do_main_loop and not btn.down:
                 u_base = PID_frwd_base.update(measurement=target_dist)
                 print("u_base: "+ str(u_base))
                 t_back_stop = 0.5
-                if cs.color == 7:
-                    t_back = 0
-                else:
-                    t_back += loop_time
+                # if cs.color == 7:
+                #     t_back = 0
+                # else:
+                t_back += loop_time
                 speed_right = -(-u_base)
                 speed_left = -(-u_base)
                 if t_back > t_back_stop:
+                    speed_right = 0
+                    speed_left = 0
+                    state = State.TURN_AWAY
+                    curr_angle = None
+                    
+            elif state == State.TURN_AWAY:
+                if curr_angle is None:
+                    end_angle = (game_state['robots'][ROBOT_ID]['dir'] + 90)%360
+                curr_angle = game_state['robots'][ROBOT_ID]['dir']
+                
+                TOL_TURN_MY = 20
+                if end_angle - TOL_TURN_MY  > curr_angle and curr_angle > end_angle + TOL_TURN_MY:
                     state = State.IDLE
+                u_turn = PID_frwd_turn.update(measurement=target_angle)
+                print("u_turn: "+ str(u_turn))
+                U = 100
+                speed_right = U
+                speed_left = -U
+                
                 
 
             # Omejimo vrednosti za hitrosti na motorjih.
