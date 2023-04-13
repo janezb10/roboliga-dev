@@ -38,7 +38,7 @@ ROBOT_ID = "14"
 # URL igralnega streznika.
 SERVER_URL = "192.168.0.3:8088/game/"
 # stevilka ID igre, v kateri je robot.
-GAME_ID = "ea53"
+GAME_ID = "6948"
 
 # Priklop motorjev na izhode.
 MOTOR_LEFT_PORT = 'outB'
@@ -89,6 +89,8 @@ class State(Enum):
     TURN = 1
     DRIVE_STRAIGHT = 2
     LOAD_NEXT_TARGET = 3
+    DRIVE_BACK = 4
+    COLLISION_AVOIDANCE = 5
 
 
 class Connection():
@@ -663,11 +665,13 @@ while do_main_loop and not btn.down:
                 print(robot_near_target)
                                 
                 print(cs.color)       
-                if robot_near_target and cs.color in [3,7] and targets_list[target_idx].tip == "object":
+                if cs.color in [3,7] and targets_list[target_idx].tip == "object":
                     print(cs.color)
                     state = State.LOAD_NEXT_TARGET
                     if cs.color == 7:
+                        
                         print("Brown")
+                        state = State.DRIVE_BACK
                     elif cs.color == 3:
                         print("Green")
                         targets_list[target_idx] = basket
@@ -767,10 +771,10 @@ while do_main_loop and not btn.down:
                 # manjsa ali enaka DIST_EPS.
                 err_eps = [d > DIST_EPS for d in robot_dist_hist]
                 
-                robot_pos = Point(game_state['robots'][ROBOT_ID]['position'])
-                target_dist = get_distance(robot_pos, target)
-                robot_near_target = target_dist < DIST_NEAR
-                if sum(err_eps) == 0 or (robot_near_target and cs.color in [3,7] and targets_list[target_idx].tip == "object"):
+                # robot_pos = Point(game_state['robots'][ROBOT_ID]['position'])
+                # target_dist = get_distance(robot_pos, target)
+                # robot_near_target = target_dist < DIST_NEAR
+                if sum(err_eps) == 0 or (cs.color in [3,7] and targets_list[target_idx].tip == "object"):
                     # Razdalja do cilja je znotraj tolerance, zamenjamo stanje.
                     speed_right = 0
                     speed_left = 0
@@ -792,6 +796,19 @@ while do_main_loop and not btn.down:
                     u_base = min(max(u_base, -SPEED_BASE_MAX), SPEED_BASE_MAX)
                     speed_right = -u_base + u_turn
                     speed_left = -u_base - u_turn
+            elif state == State.DRIVE_BACK:
+                u_base = PID_frwd_base.update(measurement=target_dist)
+                print("u_base: "+ str(u_base))
+                t_back_stop = 0.5
+                if cs.color == 7:
+                    t_back = 0
+                else:
+                    t_back += loop_time
+                speed_right = -(-u_base)
+                speed_left = -(-u_base)
+                if t_back > t_back_stop:
+                    state = State.IDLE
+                
 
             # Omejimo vrednosti za hitrosti na motorjih.
             speed_right = round(
