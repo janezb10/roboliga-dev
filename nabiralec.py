@@ -512,7 +512,7 @@ def inChargingStation(point: Point):
     inStation2 = point.x > chrg_st_2['bottom_left']['x'] and point.x < chrg_st_2['bottom_right']['x'] and point.y > chrg_st_2['top_left']['y'] and point.y < chrg_st_2['bottom_left']['y']
     return inStation1 or inStation2
 
-def nastavi_targets():
+def nastavi_targets(robot_pos = None):
     for ruda in game_state['objects']:
         p = Point(game_state["objects"][ruda]["position"])
         p.tip = "object"
@@ -526,8 +526,20 @@ def nastavi_targets():
             continue
         targets_list.append(p)
         targets_labels.append(ruda)
+    if robot_pos is not None:
+        ids = sorted(range(len(targets_list)), key=lambda x: get_distance(x, robot_pos))
+        old_targets_list = list(targets_list)
+        old_targets_labels = list(targets_labels)
+        
+        for i, id in enumerate(ids):
+            targets_list[i] = old_targets_list[id]
+            targets_labels[i] = old_targets_labels[id]
+        
+        
 
-nastavi_targets()
+robot_pos = Point(game_state['robots'][ROBOT_ID]['position'])
+nastavi_targets(robot_pos)
+# nastavi_targets() # totud kul če uno zgori ne dela
 
 # targets_list = [
 #     Point(game_state['fields']['blue_basket']['bottom_right']),
@@ -667,7 +679,7 @@ while do_main_loop and not btn.down:
                         target_idx -= 1
                         targets_list[target_idx] = chrg_st_1_center
                         target = targets_list[target_idx]
-                        targets_labels[target_idx] == 'charging_station'
+                        targets_labels[target_idx] = 'charging_station'
             
             # Razdalja med robotom in ciljem.
             target_dist = get_distance(robot_pos, target)
@@ -687,7 +699,7 @@ while do_main_loop and not btn.down:
                 speed_left = 0
                                                        
                 if cs.color in [3,7] and targets_list[target_idx].tip == "object":
-                    print(cs.color)
+                    #print(cs.color)
                     state = State.LOAD_NEXT_TARGET
                     if cs.color == 7:
                         print("Brown")
@@ -695,10 +707,11 @@ while do_main_loop and not btn.down:
                         t_back = 0
                         state = State.DRIVE_BACK
                     elif cs.color == 3:
+                        state = State.IDLE
                         #TODO lock
                         print("Green")
                         targets_list[target_idx] = basket
-                        target_idx -= 1
+                        #target_idx -= 1
                 # Preverimo, ali je robot na ciljni tocki;
                 elif target_dist > DIST_EPS:
                     # ce ni, ga tja posljemo -> gremo v stanje TURN
@@ -722,6 +735,7 @@ while do_main_loop and not btn.down:
                                               
 
             elif state == State.LOAD_NEXT_TARGET:
+                nastavi_targets(robot_pos)
                 # Nalozimo naslednjo ciljno tocko iz seznama.
                 target_idx = target_idx + 1
                 # ce smo prisli do konca seznama, gremo spet od zacetka
