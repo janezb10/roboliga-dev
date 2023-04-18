@@ -700,7 +700,10 @@ while do_main_loop and not btn.down:
                 print("gorivo ", fuel, " < 12")
                 if (inChargingStation(robot_pos) in [1,2]):
                     print("is in charging station")
+                    motor_left = 0
+                    motor_right = 0
                     state = State.IDLE
+                    print("Sel sem v IDLE, in to da se ne izpise (ce se ne) je kul, ker grem direkt v load_new_target")
                 elif (targets_labels[target_idx] != 'charging_station'):
                     print("is not in charging station --- change target to chrg stat")
 
