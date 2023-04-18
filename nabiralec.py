@@ -80,6 +80,8 @@ DIST_NEAR = 100
 # in ga damo v stanje obracanja na mestu.
 TIMER_NEAR_TARGET = 3
 
+MIN_FUEL = 8
+
 
 class State(Enum):
     """
@@ -684,8 +686,8 @@ while do_main_loop and not btn.down:
         # Sicer motorje ustavimo.
         if game_on and not game_paused and robot_data_valid and fuel > 0:
             # ce ima manj kot 7 sekund fuel pojdi na charging station (nato bo sel na naslednje stanje)
-            if fuel < 15:
-                print("gorivo ", fuel, " < 15")
+            if fuel < MIN_FUEL:
+                print("gorivo ", fuel, " < 12")
                 if (inChargingStation(robot_pos)):
                     print("is in charging station")
                     state = State.IDLE
