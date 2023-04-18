@@ -729,7 +729,6 @@ while do_main_loop and not btn.down:
                     state = State.LOAD_NEXT_TARGET
                     if cs.color == 7:
                         print("Brown")
-                        target_idx += 1
                         t_back = 0
                         state = State.DRIVE_BACK
                     elif cs.color == 3:
@@ -755,7 +754,7 @@ while do_main_loop and not btn.down:
                             state = State.IDLE
                         else:
                             print("finished charging")
-                            target_idx += 1
+                            #target_idx += 1 to ne ker gre ze tko in tko v load next target
                     
                     
                                               
@@ -855,7 +854,6 @@ while do_main_loop and not btn.down:
                     speed_left = 0
                     t_back = 0
                     state = State.DRIVE_BACK
-                    target_idx+=1
                 elif (cs.color in [3,7] and targets_list[target_idx].tip == "object"):
                     speed_right = 0
                     speed_left = 0
@@ -878,6 +876,13 @@ while do_main_loop and not btn.down:
                     speed_right = -u_base + u_turn
                     speed_left = -u_base - u_turn
             elif state == State.DRIVE_BACK:
+                # LOAD_NEXT_TARGET
+                target_idx = target_idx + 1
+                # ce smo prisli do konca seznama, gremo spet od zacetka
+                if target_idx >= len(targets_list):
+                    target_idx = 0
+                print(targets_labels[target_idx])
+                
                 u_base = PID_frwd_base.update(measurement=target_dist)
                 # print("u_base: "+ str(u_base))
                 t_back_stop = 0.8
