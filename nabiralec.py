@@ -703,7 +703,7 @@ while do_main_loop and not btn.down:
                         target_idx -= 1
                         targets_list[target_idx] = chrg_st
                         target = targets_list[target_idx]
-                        targets_labels[target_idx] == 'charging_station'
+                        targets_labels[target_idx] = 'charging_station'
                 else:
                     print("going to charging station")
             
