@@ -18,7 +18,7 @@ __status__ = "Active"
 # ce zelite na svojem racunalniku namestiti knjiznico python-ev3dev 
 # in uprorabljati "code auto-completition":
 # pip install python-ev3dev
-from ev3dev.ev3 import TouchSensor, Button, LargeMotor, Sound, ColorSensor
+from ev3dev.ev3 import TouchSensor, Button, LargeMotor, Sound, ColorSensor, Motor
 # Na EV3 robotu je potrebno namestiti paketa ujson in pycurl:
 # sudo apt-get update
 # sudo apt-get install python3-pycurl
@@ -38,11 +38,12 @@ ROBOT_ID = "14"
 # URL igralnega streznika.
 SERVER_URL = "192.168.0.3:8088/game/"
 # stevilka ID igre, v kateri je robot.
-GAME_ID = "b750"
+GAME_ID = "ae2f"
 
 # Priklop motorjev na izhode.
 MOTOR_LEFT_PORT = 'outB'
 MOTOR_RIGHT_PORT = 'outC'
+HANDLE_PORT = 'outA'
 
 # Najvisja dovoljena hitrost motorjev (teoreticno je to 1000).
 SPEED_MAX = 500
@@ -334,6 +335,19 @@ def init_large_motor(port: str) -> LargeMotor:
         motor = LargeMotor(port)
     return motor
 
+def init_rocka(port: str) -> Motor:
+    """
+    Preveri, ali je motor priklopljen na izhod `port`.
+    Vrne objekt za motor (LargeMotor).
+    """
+    motor = Motor(port)
+    while not motor.connected:
+        print('\nPriklopi motor na izhod ' + port +
+              ' in pritisni ter spusti gumb DOL.')
+        wait_for_button('down')
+        motor = Motor(port)
+    return motor
+
 
 def init_sensor_touch() -> TouchSensor:
     """
@@ -382,6 +396,16 @@ def robot_die():
         ('A3', 'h')))
     sys.exit(0)
 
+def move_up(motor, position=0,speed=300):
+    # motor.on_to_position(speed=speed, position=up)
+    print('moving up')
+    motor.run_to_abs_pos(position_sp = position, speed_sp = speed)
+
+def move_down(motor,position=-60, speed=300):
+    # motor.on_to_position(speed=speed, position=up)
+    print('moving down')
+    motor.run_to_abs_pos(position_sp= position, speed_sp = speed)
+
 
 # -----------------------------------------------------------------------------
 # NASTAVITVE TIPAL, MOTORJEV IN POVEZAVE S STREzNIKOM
@@ -397,6 +421,9 @@ print('Priprava motorjev ... ', end='')
 
 motor_left = init_large_motor(MOTOR_LEFT_PORT)
 motor_right = init_large_motor(MOTOR_RIGHT_PORT)
+handle = init_rocka(HANDLE_PORT)
+handle.reset()
+
 
 
 cs = ColorSensor()
@@ -508,8 +535,9 @@ def isInBasket(point: Point):
     return point.x > basket_bottom_left.x and point.x < basket_bottom_right.x and point.y > blue_top_left.y and point.y < blue_bottom_left.y 
 
 def inChargingStation(point: Point):
-    inStation1 = point.x > chrg_st_1['bottom_left']['x'] and point.x < chrg_st_1['bottom_right']['x'] and point.y > chrg_st_1['top_left']['y'] and point.y < chrg_st_1['bottom_left']['y']
-    inStation2 = point.x > chrg_st_2['bottom_left']['x'] and point.x < chrg_st_2['bottom_right']['x'] and point.y > chrg_st_2['top_left']['y'] and point.y < chrg_st_2['bottom_left']['y']
+    margin = 5
+    inStation1 = point.x > chrg_st_1['bottom_left']['x']+ margin and point.x < chrg_st_1['bottom_right']['x']-margin and point.y > chrg_st_1['top_left']['y']+margin and point.y < chrg_st_1['bottom_left']['y']-margin
+    inStation2 = point.x > chrg_st_2['bottom_left']['x']+ margin and point.x < chrg_st_2['bottom_right']['x']-margin and point.y > chrg_st_2['top_left']['y']+margin and point.y < chrg_st_2['bottom_left']['y']-margin
     return inStation1 or inStation2
 
 def nastavi_targets():
@@ -606,6 +634,8 @@ robot_dist_hist = deque([math.inf] * HIST_QUEUE_LENGTH)
 # da je ta cas cim krajsi.
 t_old = time()
 
+premika_kocko = False
+
 do_main_loop = True
 while do_main_loop and not btn.down:
 
@@ -654,20 +684,26 @@ while do_main_loop and not btn.down:
         # Sicer motorje ustavimo.
         if game_on and not game_paused and robot_data_valid and fuel > 0:
             # ce ima manj kot 7 sekund fuel pojdi na charging station (nato bo sel na naslednje stanje)
-            if fuel < 7:
-                print("manj kot 7 gorivo")
+            if fuel < 15:
+                print("gorivo ", fuel, " < 15")
                 if (inChargingStation(robot_pos)):
+                    print("is in charging station")
                     state = State.IDLE
                 elif (targets_labels[target_idx] != 'charging_station'):
+                    print("is not in charging station --- change target to chrg stat")
+                    chrg_st = chrg_st_2_center
+                    #TODO ce je charging station zaseden pejt na drugega
                     if target_idx == 0:
-                        targets_list.insert(0,chrg_st_1_center)
+                        targets_list.insert(0,chrg_st)
                         target = targets_list[target_idx]
                         targets_labels.insert(0,'charging_station')
                     else:
                         target_idx -= 1
-                        targets_list[target_idx] = chrg_st_1_center
+                        targets_list[target_idx] = chrg_st
                         target = targets_list[target_idx]
                         targets_labels[target_idx] == 'charging_station'
+                else:
+                    print("going to charging station")
             
             # Razdalja med robotom in ciljem.
             target_dist = get_distance(robot_pos, target)
@@ -695,9 +731,10 @@ while do_main_loop and not btn.down:
                         t_back = 0
                         state = State.DRIVE_BACK
                     elif cs.color == 3:
-                        #TODO lock
+                        move_down(handle) #zagrabi kocko
                         print("Green")
                         targets_list[target_idx] = basket
+                        premika_kocko = True
                         target_idx -= 1
                 # Preverimo, ali je robot na ciljni tocki;
                 elif target_dist > DIST_EPS:
@@ -809,8 +846,9 @@ while do_main_loop and not btn.down:
                     if (cs.color == 7):
                         id_rjave.append(targets_labels[target_idx])
                     state = State.IDLE
-                elif isInBasket(robot_pos) and cs.color == 3:
-                    #TODO unlock
+                elif isInBasket(robot_pos) and cs.color == 3 and premika_kocko:
+                    move_up(handle)
+                    premika_kocko = False
                     speed_right = 0
                     speed_left = 0
                     t_back = 0
