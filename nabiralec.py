@@ -537,10 +537,13 @@ def isInBasket(point: Point):
     return point.x > basket_bottom_left.x and point.x < basket_bottom_right.x and point.y > blue_top_left.y and point.y < blue_bottom_left.y 
 
 def inChargingStation(point: Point):
-    margin = 5
-    inStation1 = point.x > chrg_st_1['bottom_left']['x']+ margin and point.x < chrg_st_1['bottom_right']['x']-margin and point.y > chrg_st_1['top_left']['y']+margin and point.y < chrg_st_1['bottom_left']['y']-margin
-    inStation2 = point.x > chrg_st_2['bottom_left']['x']+ margin and point.x < chrg_st_2['bottom_right']['x']-margin and point.y > chrg_st_2['top_left']['y']+margin and point.y < chrg_st_2['bottom_left']['y']-margin
-    return inStation1 or inStation2
+    MARGIN = 5
+    inStation1 = point.x > chrg_st_1['bottom_left']['x']+ MARGIN and point.x < chrg_st_1['bottom_right']['x']-MARGIN and point.y > chrg_st_1['top_left']['y']+MARGIN and point.y < chrg_st_1['bottom_left']['y']-MARGIN
+    inStation2 = point.x > chrg_st_2['bottom_left']['x']+ MARGIN and point.x < chrg_st_2['bottom_right']['x']-MARGIN and point.y > chrg_st_2['top_left']['y']+MARGIN and point.y < chrg_st_2['bottom_left']['y']-MARGIN
+    if inStation1: return 1
+    elif inStation2: return 2
+    
+    return 0
 
 def nastavi_targets():
     for ruda in game_state['objects']:
@@ -548,14 +551,18 @@ def nastavi_targets():
         p.tip = "object"
         # v targets bo dodal le tiste, ki niso v bazi
         if(isInBasket(p)):
-            print(p, " is in basket")
+            #print(p, " is in basket")
             continue
         # ne bo dodal rjavih kock
         if(game_state["objects"][ruda]["id"] in id_rjave):
-            print(p, " is brown")
+            #print(p, " is brown")
             continue
         targets_list.append(p)
         targets_labels.append(ruda)
+    # sortiranje po oddaljenosti od basketa
+    z = sorted(zip(targets_list, targets_labels), key=lambda pair: get_distance(pair[0],basket))
+    targets_list = [a for a, _ in z]
+    targets_labels = [b for _, b in z]
 
 nastavi_targets()
 
@@ -638,6 +645,9 @@ t_old = time()
 
 premika_kocko = False
 
+robot_ids = game_state['robots']
+robot_id_nasprotnik = robot_ids[0] if robot_ids[0] != ROBOT_ID else robot_ids[1]
+
 do_main_loop = True
 while do_main_loop and not btn.down:
 
@@ -688,13 +698,30 @@ while do_main_loop and not btn.down:
             # ce ima manj kot 7 sekund fuel pojdi na charging station (nato bo sel na naslednje stanje)
             if fuel < MIN_FUEL:
                 print("gorivo ", fuel, " < 12")
-                if (inChargingStation(robot_pos)):
+                if (inChargingStation(robot_pos) in [1,2]):
                     print("is in charging station")
                     state = State.IDLE
                 elif (targets_labels[target_idx] != 'charging_station'):
                     print("is not in charging station --- change target to chrg stat")
-                    chrg_st = chrg_st_2_center
-                    #TODO ce je charging station zaseden pejt na drugega
+
+                    #ce je charging station zaseden pejt na drugega
+                    try:
+                        robot_pos_nasprotnik = Point(game_state['robots'][robot_id_nasprotnik]['position'])
+                        #chrg_st = max([chrg_st_1_center,chrg_st_2_center], key=lambda x: get_distance(x, robot_pos_nasprotnik))
+                        chrg_st_nasprotnik = inChargingStation(robot_pos_nasprotnik)
+                        if chrg_st_nasprotnik == 1:
+                            chrg_st = chrg_st_2_center
+                        elif chrg_st_nasprotnik == 2:
+                            chrg_st = chrg_st_1_center
+                        else:
+                            try:
+                                chrg_st = min([chrg_st_1_center,chrg_st_2_center], key=lambda x: get_distance(x, robot_pos))
+                            except:
+                                chrg_st = chrg_st_2_center
+                    except:
+                        chrg_st = chrg_st_2_center
+                                          
+                    
                     if target_idx == 0:
                         targets_list.insert(0,chrg_st)
                         target = targets_list[target_idx]
@@ -765,6 +792,7 @@ while do_main_loop and not btn.down:
                 target_idx = target_idx + 1
                 # ce smo prisli do konca seznama, gremo spet od zacetka
                 if target_idx >= len(targets_list):
+                    nastavi_targets()
                     target_idx = 0
                 print(targets_labels[target_idx])
                 # Gremo v stanje IDLE, da preverimo, ali smo morda ze kar na cilju.
@@ -822,6 +850,24 @@ while do_main_loop and not btn.down:
                     PID_frwd_base.reset()
                     PID_frwd_turn.reset()
                     timer_near_target = TIMER_NEAR_TARGET
+                    
+                    t_drive_straight_start = time_now
+                    prev_locations = [robot_pos]
+                    num_stuck = 0
+                
+                TOL_TIME_NOT_CHECK_STUCK = 5
+                TOL_NUM_STUCK = 10
+                TOL_DIFF_DIST_STUCK = 5
+                prev_locations.append(robot_pos)
+                
+                if time_now - t_drive_straight_start < TOL_TIME_NOT_CHECK_STUCK:
+                    detected_stuck = len(prev_locations) > 10 and get_distance(prev_locations[len(prev_locations)-9], robot_pos) < TOL_DIFF_DIST_STUCK
+                    if detected_stuck:
+                        num_stuck += 1
+                    if num_stuck > TOL_NUM_STUCK:
+                        state = State.DRIVE_BACK
+                        target_idx +=1
+                    
 
                 # Ali smo blizu cilja?
                 robot_near_target = target_dist < DIST_NEAR
